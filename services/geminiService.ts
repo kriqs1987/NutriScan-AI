@@ -1,10 +1,9 @@
 
 import { GoogleGenAI, Type } from "@google/genai";
-import { AnalysisResult, RecipeSuggestion } from "../types";
+import { AnalysisResult } from "../types";
 
-const getAIClient = () => {
-  return new GoogleGenAI({ apiKey: process.env.API_KEY });
-};
+// Klucz API jest pobierany bezpośrednio z process.env.API_KEY zgodnie z wymogami środowiska
+const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
 
 const ANALYSIS_SCHEMA = {
   type: Type.OBJECT,
@@ -35,8 +34,7 @@ const ANALYSIS_SCHEMA = {
 
 export const geminiService = {
   async analyzeImage(base64Image: string): Promise<AnalysisResult> {
-    const ai = getAIClient();
-    const prompt = `Analyze this food image. Identify each food item and estimate its weight/quantity, calories, and macronutrients (protein, carbs, fats). Provide a summary. Return the data in Polish language.`;
+    const prompt = `Przeanalizuj to zdjęcie jedzenia. Zidentyfikuj każdy składnik i oszacuj jego masę, kalorie oraz makroskładniki (białko, węgle, tłuszcze). Zwróć dane po polsku.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -52,17 +50,11 @@ export const geminiService = {
       }
     });
 
-    try {
-      return JSON.parse(response.text || '') as AnalysisResult;
-    } catch (e) {
-      console.error("Failed to parse Gemini response", e);
-      throw new Error("Nie udało się przeanalizować zdjęcia.");
-    }
+    return JSON.parse(response.text || '');
   },
 
   async estimateNutrition(productName: string) {
-    const ai = getAIClient();
-    const prompt = `Podaj szacunkowe wartości odżywcze dla produktu: "${productName}" (standardowa porcja 100g lub 1 sztuka). Zwróć format JSON: { "calories": number, "protein": number, "carbs": number, "fats": number, "quantity": string }. Język polski.`;
+    const prompt = `Podaj szacunkowe wartości odżywcze dla produktu: "${productName}" (standardowa porcja 100g lub 1 sztuka). Zwróć format JSON po polsku.`;
     
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -87,8 +79,7 @@ export const geminiService = {
   },
 
   async analyzeText(text: string): Promise<AnalysisResult> {
-    const ai = getAIClient();
-    const prompt = `Przeanalizuj opis posiłku: "${text}". Wyodrębnij składniki, oszacuj ich kalorie i makroskładniki (białko, węgle, tłuszcze). Zwróć dane w formacie JSON po polsku.`;
+    const prompt = `Przeanalizuj opis posiłku: "${text}". Wyodrębnij składniki i ich wartości odżywcze. Zwróć dane po polsku.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
@@ -99,11 +90,6 @@ export const geminiService = {
       }
     });
 
-    try {
-      return JSON.parse(response.text || '') as AnalysisResult;
-    } catch (e) {
-      console.error("Failed to parse Gemini response", e);
-      throw new Error("Nie udało się przeanalizować tekstu.");
-    }
+    return JSON.parse(response.text || '');
   }
 };
