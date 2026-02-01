@@ -1,0 +1,7 @@
+{
+  "name": "NutriScan AI - Zaawansowany Analizator Posiłków",
+  "description": "Inteligentna aplikacja do śledzenia diety wykorzystująca AI do rozpoznawania potraw, wyliczania kalorii i makroskładników bezpośrednio ze zdjęć.",
+  "requestFramePermissions": [
+    "camera"
+  ]
+}
