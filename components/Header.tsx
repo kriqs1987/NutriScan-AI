@@ -7,7 +7,7 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
-  const apiKey = process.env.API_KEY || '';
+  const apiKey = import.meta.env.VITE_GOOGLE_AI_KEY || '';
   const maskedKey = apiKey 
     ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` 
     : 'NIEWYKRYTO';
