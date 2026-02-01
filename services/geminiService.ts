@@ -2,74 +2,68 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, RecipeSuggestion } from "../types";
 
-// Funkcja pomocnicza do pobierania klucza API z różnych możliwych źródeł środowiskowych.
-// Zgodnie z wytycznymi SDK, zawsze używamy obiektu { apiKey: string } podczas inicjalizacji.
 const getAIClient = () => {
-  const apiKey = (import.meta as any).env?.VITE_GOOGLE_AI_KEY || process.env.API_KEY || '';
-  return new GoogleGenAI({ apiKey });
+  return new GoogleGenAI({ apiKey: process.env.API_KEY });
+};
+
+const ANALYSIS_SCHEMA = {
+  type: Type.OBJECT,
+  properties: {
+    items: {
+      type: Type.ARRAY,
+      items: {
+        type: Type.OBJECT,
+        properties: {
+          name: { type: Type.STRING },
+          calories: { type: Type.NUMBER },
+          protein: { type: Type.NUMBER },
+          carbs: { type: Type.NUMBER },
+          fats: { type: Type.NUMBER },
+          quantity: { type: Type.STRING }
+        },
+        required: ["name", "calories", "protein", "carbs", "fats"]
+      }
+    },
+    totalCalories: { type: Type.NUMBER },
+    totalProtein: { type: Type.NUMBER },
+    totalCarbs: { type: Type.NUMBER },
+    totalFats: { type: Type.NUMBER },
+    confidence: { type: Type.NUMBER }
+  },
+  required: ["items", "totalCalories", "totalProtein", "totalCarbs", "totalFats", "confidence"]
 };
 
 export const geminiService = {
   async analyzeImage(base64Image: string): Promise<AnalysisResult> {
     const ai = getAIClient();
-    
     const prompt = `Analyze this food image. Identify each food item and estimate its weight/quantity, calories, and macronutrients (protein, carbs, fats). Provide a summary. Return the data in Polish language.`;
 
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
-      contents: [
-        {
-          parts: [
-            { text: prompt },
-            { inlineData: { mimeType: "image/jpeg", data: base64Image.split(',')[1] || base64Image } }
-          ]
-        }
-      ],
+      contents: {
+        parts: [
+          { text: prompt },
+          { inlineData: { mimeType: "image/jpeg", data: base64Image.split(',')[1] || base64Image } }
+        ]
+      },
       config: {
         responseMimeType: "application/json",
-        responseSchema: {
-          type: Type.OBJECT,
-          properties: {
-            items: {
-              type: Type.ARRAY,
-              items: {
-                type: Type.OBJECT,
-                properties: {
-                  name: { type: Type.STRING },
-                  calories: { type: Type.NUMBER },
-                  protein: { type: Type.NUMBER },
-                  carbs: { type: Type.NUMBER },
-                  fats: { type: Type.NUMBER },
-                  quantity: { type: Type.STRING }
-                },
-                required: ["name", "calories", "protein", "carbs", "fats"]
-              }
-            },
-            totalCalories: { type: Type.NUMBER },
-            totalProtein: { type: Type.NUMBER },
-            totalCarbs: { type: Type.NUMBER },
-            totalFats: { type: Type.NUMBER },
-            confidence: { type: Type.NUMBER }
-          },
-          required: ["items", "totalCalories", "totalProtein", "totalCarbs", "totalFats", "confidence"]
-        }
+        responseSchema: ANALYSIS_SCHEMA as any
       }
     });
 
     try {
-      // Wyciągamy tekst bezpośrednio z właściwości .text (nie jako metodę .text())
-      const resultText = response.text || '';
-      return JSON.parse(resultText) as AnalysisResult;
+      return JSON.parse(response.text || '') as AnalysisResult;
     } catch (e) {
       console.error("Failed to parse Gemini response", e);
-      throw new Error("Nie udało się przeanalizować zdjęcia. Spróbuj ponownie.");
+      throw new Error("Nie udało się przeanalizować zdjęcia.");
     }
   },
 
-  async generateRecipe(items: string[]): Promise<RecipeSuggestion> {
+  async estimateNutrition(productName: string) {
     const ai = getAIClient();
-    const prompt = `Based on these ingredients: ${items.join(', ')}, suggest a healthy recipe. Return as JSON in Polish.`;
-
+    const prompt = `Podaj szacunkowe wartości odżywcze dla produktu: "${productName}" (standardowa porcja 100g lub 1 sztuka). Zwróć format JSON: { "calories": number, "protein": number, "carbs": number, "fats": number, "quantity": string }. Język polski.`;
+    
     const response = await ai.models.generateContent({
       model: "gemini-3-flash-preview",
       contents: prompt,
@@ -78,16 +72,38 @@ export const geminiService = {
         responseSchema: {
           type: Type.OBJECT,
           properties: {
-            title: { type: Type.STRING },
-            ingredients: { type: Type.ARRAY, items: { type: Type.STRING } },
-            instructions: { type: Type.ARRAY, items: { type: Type.STRING } }
+            calories: { type: Type.NUMBER },
+            protein: { type: Type.NUMBER },
+            carbs: { type: Type.NUMBER },
+            fats: { type: Type.NUMBER },
+            quantity: { type: Type.STRING }
           },
-          required: ["title", "ingredients", "instructions"]
-        }
+          required: ["calories", "protein", "carbs", "fats", "quantity"]
+        } as any
+      }
+    });
+    
+    return JSON.parse(response.text || '');
+  },
+
+  async analyzeText(text: string): Promise<AnalysisResult> {
+    const ai = getAIClient();
+    const prompt = `Przeanalizuj opis posiłku: "${text}". Wyodrębnij składniki, oszacuj ich kalorie i makroskładniki (białko, węgle, tłuszcze). Zwróć dane w formacie JSON po polsku.`;
+
+    const response = await ai.models.generateContent({
+      model: "gemini-3-flash-preview",
+      contents: prompt,
+      config: {
+        responseMimeType: "application/json",
+        responseSchema: ANALYSIS_SCHEMA as any
       }
     });
 
-    const resultText = response.text || '';
-    return JSON.parse(resultText) as RecipeSuggestion;
+    try {
+      return JSON.parse(response.text || '') as AnalysisResult;
+    } catch (e) {
+      console.error("Failed to parse Gemini response", e);
+      throw new Error("Nie udało się przeanalizować tekstu.");
+    }
   }
 };
