@@ -1,9 +1,9 @@
-
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-// Klucz API jest pobierany bezpośrednio z process.env.API_KEY zgodnie z wymogami środowiska
-const ai = new GoogleGenAI({ apiKey: process.env.API_KEY });
+// Inicjalizacja klienta zgodnie z dokumentacją SDK
+const getAIClient = () => new GoogleGenAI(import.meta.env.VITE_GOOGLE_AI_KEY || '');
+
 
 const ANALYSIS_SCHEMA = {
   type: Type.OBJECT,
@@ -50,7 +50,7 @@ export const geminiService = {
       }
     });
 
-    return JSON.parse(response.text || '');
+    return JSON.parse(response.text || '{}');
   },
 
   async estimateNutrition(productName: string) {
@@ -75,7 +75,7 @@ export const geminiService = {
       }
     });
     
-    return JSON.parse(response.text || '');
+    return JSON.parse(response.text || '{}');
   },
 
   async analyzeText(text: string): Promise<AnalysisResult> {
@@ -90,6 +90,6 @@ export const geminiService = {
       }
     });
 
-    return JSON.parse(response.text || '');
+    return JSON.parse(response.text || '{}');
   }
 };
