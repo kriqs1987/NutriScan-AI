@@ -7,9 +7,18 @@ interface HeaderProps {
 }
 
 const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
-  const apiKey = import.meta.env.VITE_GOOGLE_AI_KEY || '';
+  // Próba odczytu klucza z obu źródeł dla poprawnej weryfikacji w UI
+  const getDisplayKey = () => {
+    try {
+      return (import.meta as any).env?.VITE_GOOGLE_AI_KEY || process.env.API_KEY || '';
+    } catch {
+      return process.env.API_KEY || '';
+    }
+  };
+
+  const apiKey = getDisplayKey();
   const maskedKey = apiKey 
-    ? `${apiKey.substring(0, 4)}...${apiKey.substring(apiKey.length - 4)}` 
+    ? `${apiKey.substring(0, 10)}...${apiKey.substring(Math.max(0, apiKey.length - 6))}` 
     : 'NIEWYKRYTO';
 
   return (
@@ -24,8 +33,8 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
           </h1>
           <div className="flex items-center mt-1 space-x-2">
             <span className={`w-2 h-2 rounded-full ${apiKey ? 'bg-emerald-500 animate-pulse' : 'bg-rose-500'}`}></span>
-            <span className={`text-[9px] font-bold uppercase tracking-tighter ${apiKey ? 'text-emerald-600' : 'text-rose-500'}`}>
-              KEY: {maskedKey}
+            <span className={`text-[9px] font-bold uppercase tracking-tighter flex items-center ${apiKey ? 'text-emerald-600' : 'text-rose-500'}`}>
+              KEY: <code className="ml-1 bg-slate-100 px-1 py-0.5 rounded border border-slate-200 font-mono lowercase">{maskedKey}</code>
             </span>
           </div>
         </div>
@@ -53,9 +62,11 @@ const Header: React.FC<HeaderProps> = ({ currentView, onNavigate }) => {
       </nav>
 
       <div className="hidden md:block">
-        <div className="flex items-center space-x-3 bg-slate-50 px-3 py-1.5 rounded-full border border-slate-100">
-           <div className="w-2 h-2 rounded-full bg-emerald-500"></div>
-           <span className="text-[10px] font-bold text-slate-500 uppercase tracking-widest">System Online</span>
+        <div className={`flex items-center space-x-3 px-3 py-1.5 rounded-full border ${apiKey ? 'bg-emerald-50 border-emerald-100' : 'bg-rose-50 border-rose-100'}`}>
+           <div className={`w-2 h-2 rounded-full ${apiKey ? 'bg-emerald-500' : 'bg-rose-500'}`}></div>
+           <span className={`text-[10px] font-bold uppercase tracking-widest ${apiKey ? 'text-emerald-700' : 'text-rose-700'}`}>
+             {apiKey ? 'System Gotowy' : 'Brak Połączenia'}
+           </span>
         </div>
       </div>
     </header>

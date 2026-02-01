@@ -1,9 +1,17 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult } from "../types";
 
-// Inicjalizacja klienta zgodnie z dokumentacją SDK
-const getAIClient = () => new GoogleGenAI(import.meta.env.VITE_GOOGLE_AI_KEY || '');
+// Inicjalizacja klienta przy użyciu klucza ze wskazanego źródła użytkownika
+// Zachowujemy fallback do process.env.API_KEY dla kompatybilności
+const getApiKey = () => {
+  try {
+    return (import.meta as any).env?.VITE_GOOGLE_AI_KEY || process.env.API_KEY || '';
+  } catch {
+    return process.env.API_KEY || '';
+  }
+};
 
+const ai = new GoogleGenAI({ apiKey: getApiKey() });
 
 const ANALYSIS_SCHEMA = {
   type: Type.OBJECT,
@@ -50,7 +58,8 @@ export const geminiService = {
       }
     });
 
-    return JSON.parse(response.text || '{}');
+    const text = response.text || '{}';
+    return JSON.parse(text);
   },
 
   async estimateNutrition(productName: string) {
@@ -75,7 +84,8 @@ export const geminiService = {
       }
     });
     
-    return JSON.parse(response.text || '{}');
+    const text = response.text || '{}';
+    return JSON.parse(text);
   },
 
   async analyzeText(text: string): Promise<AnalysisResult> {
@@ -90,6 +100,7 @@ export const geminiService = {
       }
     });
 
-    return JSON.parse(response.text || '{}');
+    const output = response.text || '{}';
+    return JSON.parse(output);
   }
 };
