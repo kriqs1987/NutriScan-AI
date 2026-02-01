@@ -2,7 +2,12 @@
 import { GoogleGenAI, Type } from "@google/genai";
 import { AnalysisResult, RecipeSuggestion } from "../types";
 
-const getAIClient = () => new GoogleGenAI({ apiKey: process.env.API_KEY || '' });
+// Funkcja pomocnicza do pobierania klucza API z różnych możliwych źródeł środowiskowych.
+// Zgodnie z wytycznymi SDK, zawsze używamy obiektu { apiKey: string } podczas inicjalizacji.
+const getAIClient = () => {
+  const apiKey = (import.meta as any).env?.VITE_GOOGLE_AI_KEY || process.env.API_KEY || '';
+  return new GoogleGenAI({ apiKey });
+};
 
 export const geminiService = {
   async analyzeImage(base64Image: string): Promise<AnalysisResult> {
@@ -52,7 +57,9 @@ export const geminiService = {
     });
 
     try {
-      return JSON.parse(response.text) as AnalysisResult;
+      // Wyciągamy tekst bezpośrednio z właściwości .text (nie jako metodę .text())
+      const resultText = response.text || '';
+      return JSON.parse(resultText) as AnalysisResult;
     } catch (e) {
       console.error("Failed to parse Gemini response", e);
       throw new Error("Nie udało się przeanalizować zdjęcia. Spróbuj ponownie.");
@@ -80,6 +87,7 @@ export const geminiService = {
       }
     });
 
-    return JSON.parse(response.text) as RecipeSuggestion;
+    const resultText = response.text || '';
+    return JSON.parse(resultText) as RecipeSuggestion;
   }
 };
